@@ -1,0 +1,14 @@
+# Daily Expenses maintenance contract
+- Permanent application ID: com.dailyexpenses.personal. Do not change it.
+- Never change the signing identity of an installed app. No keys/passwords in source archives or Git.
+- Increment pubspec version build number for every distributed update.
+- Do not uninstall, clear app data, delete bill folders, or recreate databases as an upgrade strategy.
+- Persist money as integer paise; totals must come from database queries.
+- Drift schema changes require schemaVersion increment, additive migration and preservation tests.
+- Keep migrations for every prior distributed version. Current schema 2 adds indexes to v1.
+- Run code generation, flutter analyze and flutter test before APK builds.
+- Keep pubspec.lock, Android package ID, SDK versions, Gradle wrapper and release certificate fingerprint stable/reviewable.
+- Expense attachment changes must commit database references before deleting obsolete files.
+- All writes and backup/restore use AppStore.lock. Never import incoming database SQL.
+- Preserve compact UI, offline behavior, hidden balance default, and lack of INTERNET permission.
+- Report exact checks executed, untested device behavior, artifact type and signing status honestly.
