@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await refresh();
     nameFocus.requestFocus();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Expense saved · Category optional'), action: SnackBarAction(label: 'Category', onPressed: () => chooseCategory(savedId))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, margin: const EdgeInsets.fromLTRB(8, 0, 8, 132), content: const Text('Expense saved · Category optional'), action: SnackBarAction(label: 'Category', onPressed: () => chooseCategory(savedId))));
     }
   });
   Future<void> chooseCategory(int expenseId) async {
