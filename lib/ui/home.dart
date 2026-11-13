@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final selected = await showModalBottomSheet<int>(context: context, isScrollControlled: true, builder: (c) => SafeArea(child: SizedBox(height: MediaQuery.sizeOf(c).height * .65, child: Column(children: [
         ListTile(title: const Text('Category (optional)'), subtitle: const Text('You can set or change this later.'), trailing: IconButton(tooltip: 'Later', icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c))),
         Expanded(child: ListView(children: [ListTile(title: const Text('No category / clear category'), onTap: () => Navigator.pop(c, 0)), for (final category in categories) ListTile(dense: true, title: Text(category.name), onTap: () => Navigator.pop(c, category.id))]))
-      ])))));
+      ]))));
       if (selected == null) { return; }
       await widget.store.mutate(() => widget.store.ledger.assignCategory(expenseId, selected == 0 ? null : selected));
       await refresh();
