@@ -1,5 +1,7 @@
 # Daily Expenses — Android
 
+**Signing repair:** See [SIGNING_AND_MIGRATION.md](SIGNING_AND_MIGRATION.md). APK distribution now requires permanent release signing. Push builds run checks only; temporary debug APKs are no longer published. Existing test installations require a verified backup before any replacement. This supersedes the older debug-build instructions below.
+
 An offline Flutter/Dart expense ledger with Drift/SQLite, compact Material 3 UI, private bill files, image/PDF viewing, PIN access lock and ZIP backup/restore.
 
 Permanent application ID: **com.dailyexpenses.personal**. Version **1.0.0+1**. Android 7.0/API 24 or later.

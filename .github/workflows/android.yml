@@ -1,11 +1,6 @@
 name: Android APK
 on:
   workflow_dispatch:
-    inputs:
-      release:
-        description: Build a signed release (requires signing secrets)
-        type: boolean
-        default: false
   push:
     branches: [main]
   pull_request:
@@ -38,14 +33,17 @@ jobs:
       - run: flutter analyze
       - run: flutter test --reporter expanded
       - name: Configure release signing
-        if: github.event_name == 'workflow_dispatch' && inputs.release
+        if: github.event_name == 'workflow_dispatch'
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          test -n "$KEYSTORE_BASE64" && test -n "$STORE_PASSWORD" && test -n "$KEY_PASSWORD" && test -n "$KEY_ALIAS"
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Permanent signing is not configured. Run python3 tool/setup_signing.py once in your trusted GitHub Codespace. Debug APK distribution is disabled."
+            exit 1
+          fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/daily-expenses.jks"
           python3 - <<'PY'
           import os
@@ -55,19 +53,16 @@ jobs:
               for k,v in {'storeFile':os.environ['RUNNER_TEMP']+'/daily-expenses.jks','storePassword':os.environ['STORE_PASSWORD'],'keyPassword':os.environ['KEY_PASSWORD'],'keyAlias':os.environ['KEY_ALIAS']}.items():
                   f.write(k+'='+escape(v)+'\n')
           PY
-      - name: Build APK
-        env:
-          RELEASE_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
-        run: |
-          if [ "$RELEASE_BUILD" = "true" ]; then
-            flutter build apk --release
-          else
-            flutter build apk --debug
-          fi
-      - uses: actions/upload-artifact@v4
+      - name: Build signed release APK
+        if: github.event_name == 'workflow_dispatch'
+        run: flutter build apk --release
+      - name: Publish signed release APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
         with:
-          name: Daily-Expenses-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/*.apk
+          name: Daily-Expenses-Release-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
           retention-days: 30
       - name: Remove temporary signing credentials
         if: always()

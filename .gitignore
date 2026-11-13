@@ -8,3 +8,6 @@ android/key.properties
 *.p12
 *.log
 preview.png
+
+.signing-backup/
+__pycache__/
