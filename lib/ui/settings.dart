@@ -299,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Daily Expenses 1.0.0\nOffline • No account • No ads\nUpdate the existing app; never uninstall to update.',
+            'Daily Expenses 1.0.1\nOffline • No account • No ads\nUpdate the existing app; never uninstall to update.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Colors.deepPurple),
           ),

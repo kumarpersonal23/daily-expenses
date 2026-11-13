@@ -224,6 +224,7 @@ void main() {
         ]) {
           await old.customStatement('DROP INDEX $index');
         }
+        await old.customStatement('ALTER TABLE expenses DROP COLUMN category_id');
         await old.customStatement('PRAGMA user_version=1');
         await old.close();
         old = AppDatabase.file(file);
@@ -239,7 +240,7 @@ void main() {
           (await old.customSelect('PRAGMA user_version').getSingle()).read<int>(
             'user_version',
           ),
-          2,
+          3,
         );
         await old.close();
       } finally {
@@ -247,4 +248,22 @@ void main() {
       }
     },
   );
+  test('optional categories can be assigned later, changed and cleared on closed days', () async {
+    final m = await ledger.month(2026, 11);
+    final d = (await ledger.days(m.id)).single;
+    final id = await ledger.save(dayId: d.id, name: 'Milk', paise: 8000);
+    expect((await ledger.expenses(d.id)).single.categoryId, isNull);
+    final categories = await ledger.categoryList();
+    expect(categories.map((c) => c.name), AppDatabase.categoryNames);
+    await ledger.closeDay(d);
+    await ledger.assignCategory(id, categories[2].id);
+    expect((await ledger.expenses(d.id)).single.categoryId, categories[2].id);
+    await ledger.save(id: id, dayId: d.id, name: 'Milk edited', paise: 9000);
+    expect((await ledger.expenses(d.id)).single.categoryId, categories[2].id);
+    await ledger.assignCategory(id, categories.first.id);
+    await ledger.assignCategory(id, null);
+    expect((await ledger.expenses(d.id)).single.categoryId, isNull);
+    expect(await ledger.total(monthId: m.id), 9000);
+  });
+
 }

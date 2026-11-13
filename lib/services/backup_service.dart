@@ -16,9 +16,9 @@ class BackupService {
     'settings',
     'months',
     'days',
+    'categories',
     'expenses',
     'expense_attachments',
-    'categories',
   ];
   Future<Uint8List> export() async {
     final tmp = File(
@@ -86,7 +86,7 @@ class BackupService {
             as Map<String, dynamic>;
     if (manifest['format'] != 'daily-expenses' ||
         manifest['version'] != 1 ||
-        !(manifest['schema'] == 1 || manifest['schema'] == 2)) {
+        !(manifest['schema'] == 1 || manifest['schema'] == 2 || manifest['schema'] == 3)) {
       throw const FormatException('Unsupported backup version.');
     }
     final tmp = File('${files.root.path}/restore_${files.uniqueName()}.sqlite');
@@ -115,6 +115,7 @@ class BackupService {
             .select('PRAGMA table_info($table)')
             .map((r) => r['name'] as String)
             .toSet();
+        if (table == 'expenses' && manifest['schema'] != 3) { expected.remove('category_id'); }
         if (expected.length != actual.length || !expected.containsAll(actual)) {
           throw const FormatException('Backup columns do not match this app.');
         }
@@ -170,6 +171,7 @@ class BackupService {
             );
           }
         }
+        await db.seedCategories();
         if ((await db.customSelect('PRAGMA foreign_key_check').get())
             .isNotEmpty) {
           throw const FormatException('Invalid backup relationships.');

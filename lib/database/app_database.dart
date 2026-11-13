@@ -48,6 +48,7 @@ class Expenses extends Table {
   IntColumn get amountPaise =>
       integer().check(amountPaise.isBiggerThanValue(0))();
   IntColumn get sortOrder => integer()();
+  IntColumn get categoryId => integer().nullable().references(Categories, #id, onDelete: KeyAction.setNull)();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   @override
@@ -82,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
   factory AppDatabase.file(File file) => AppDatabase(NativeDatabase(file));
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
   // Version 2 adds indexes only. Version 1 fixtures remain readable without data loss.
   Future<void> indexes() async {
     await customStatement(
@@ -99,14 +100,25 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  static const categoryNames = ['Groceries', 'Vegetables & Fruits', 'Milk & Dairy', 'Food & Dining', 'Fuel', 'Transport', 'Water & Gas', 'Recharges & Subscriptions', 'Medical', 'Education', 'Clothing', 'Repairs & Maintenance', 'Shopping', 'Others'];
+  Future<void> seedCategories() async {
+    for (final name in categoryNames) {
+      await into(categories).insert(CategoriesCompanion.insert(name: name, colour: 0xff7047c6), mode: InsertMode.insertOrIgnore);
+    }
+  }
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+      await seedCategories();
       await indexes();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) await indexes();
+      if (from < 3) {
+        await m.addColumn(expenses, expenses.categoryId);
+        await seedCategories();
+      }
     },
     beforeOpen: (_) async {
       await customStatement('PRAGMA foreign_keys = ON');

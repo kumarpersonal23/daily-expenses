@@ -109,7 +109,7 @@ class Ledger {
               updatedAt: Value(DateTime.now()),
             ),
           );
-      if (changed != 1) throw StateError('Expense no longer exists.');
+      if (changed != 1) { throw StateError('Expense no longer exists.'); }
       expenseId = id;
     }
     for (final bill in bills) {
@@ -117,6 +117,11 @@ class Ledger {
     }
     return expenseId;
   });
+  Future<List<Category>> categoryList() => (db.select(db.categories)..orderBy([(t) => OrderingTerm.asc(t.id)])).get();
+  Future<void> assignCategory(int expenseId, int? categoryId) async {
+    final changed = await (db.update(db.expenses)..where((t) => t.id.equals(expenseId))).write(ExpensesCompanion(categoryId: Value(categoryId), updatedAt: Value(DateTime.now())));
+    if (changed != 1) { throw StateError('Expense no longer exists.'); }
+  }
   Future<void> attach(int expenseId, StagedBill bill) async {
     await db
         .into(db.expenseAttachments)

@@ -38,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final pending = <StagedBill>[];
   Expense? editing;
   int revision = 0;
+  Map<int, String> categoryNames = {};
   @override
   void initState() {
     super.initState();
@@ -68,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted) { showError(context, e); }
     }
   }
 
@@ -76,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final ticket = ++revision;
     try {
       final m = await widget.store.ledger.month(selected.year, selected.month);
+      categoryNames = {for (final c in await widget.store.ledger.categoryList()) c.id: c.name};
       final days = await widget.store.ledger.days(m.id);
       final result = <DayView>[];
       for (final day in days) {
@@ -138,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await operation();
     } catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted) { showError(context, e); }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -152,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     final value = parseMoney(amount.text);
-    await widget.store.mutate(
+    final savedId = await widget.store.mutate(
       () => widget.store.ledger.save(
         id: editing?.id,
         dayId: dayId,
@@ -167,7 +169,24 @@ class _HomeScreenState extends State<HomeScreen> {
     editing = null;
     await refresh();
     nameFocus.requestFocus();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Expense saved · Category optional'), action: SnackBarAction(label: 'Category', onPressed: () => chooseCategory(savedId))));
+    }
   });
+  Future<void> chooseCategory(int expenseId) async {
+    try {
+      final categories = await widget.store.ledger.categoryList();
+      if (!mounted) { return; }
+      FocusScope.of(context).unfocus();
+      final selected = await showModalBottomSheet<int>(context: context, isScrollControlled: true, builder: (c) => SafeArea(child: SizedBox(height: MediaQuery.sizeOf(c).height * .65, child: Column(children: [
+        ListTile(title: const Text('Category (optional)'), subtitle: const Text('You can set or change this later.'), trailing: IconButton(tooltip: 'Later', icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c))),
+        Expanded(child: ListView(children: [ListTile(title: const Text('No category / clear category'), onTap: () => Navigator.pop(c, 0)), for (final category in categories) ListTile(dense: true, title: Text(category.name), onTap: () => Navigator.pop(c, category.id))]))
+      ])))));
+      if (selected == null) { return; }
+      await widget.store.mutate(() => widget.store.ledger.assignCategory(expenseId, selected == 0 ? null : selected));
+      await refresh();
+    } catch (e) { if (mounted) { showError(context, e); } }
+  }
   Future<void> clearDraft() async {
     for (final bill in pending) {
       await widget.store.files.remove(bill.relative);
@@ -267,12 +286,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         Expanded(
-          child: Text(
-            e.particulars,
+          child: InkWell(onTap: busy ? null : () => chooseCategory(e.id), child: Text(
+            e.categoryId == null ? e.particulars : '${e.particulars} · ${categoryNames[e.categoryId] ?? ''}',
             style: const TextStyle(fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-          ),
+          )),
         ),
         SizedBox(
           width: 91,
@@ -572,6 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    compactIcon(Icons.category_outlined, 'Set category (optional)', busy ? null : () => chooseCategory(editing!.id), color: Colors.teal),
                     compactIcon(
                       Icons.delete_outline,
                       'Delete expense',
