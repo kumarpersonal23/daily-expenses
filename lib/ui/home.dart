@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final nameFocus = FocusNode(), amountFocus = FocusNode();
   final pending = <StagedBill>[];
   Expense? editing;
+  int? draftCategoryId;
   int revision = 0;
   Map<int, String> categoryNames = {};
   @override
@@ -154,15 +155,24 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     final value = parseMoney(amount.text);
+    final ledger = widget.store.ledger;
+    final selectedCategoryId = draftCategoryId;
     final savedId = await widget.store.mutate(
-      () => widget.store.ledger.save(
-        id: editing?.id,
-        dayId: dayId,
-        name: name.text,
-        paise: value,
-        bills: List.of(pending),
-      ),
+      () => ledger.db.transaction(() async {
+        final id = await ledger.save(
+          id: editing?.id,
+          dayId: dayId,
+          name: name.text,
+          paise: value,
+          bills: List.of(pending),
+        );
+        if (selectedCategoryId != editing?.categoryId) {
+          await ledger.assignCategory(id, selectedCategoryId);
+        }
+        return id;
+      }),
     );
+    draftCategoryId = null;
     pending.clear();
     name.clear();
     amount.clear();
@@ -195,10 +205,12 @@ class _HomeScreenState extends State<HomeScreen> {
     name.clear();
     amount.clear();
     editing = null;
+    draftCategoryId = null;
   }
 
   bool get dirty =>
-      name.text.isNotEmpty || amount.text.isNotEmpty || pending.isNotEmpty;
+      name.text.isNotEmpty || amount.text.isNotEmpty || pending.isNotEmpty ||
+      draftCategoryId != editing?.categoryId;
   Future<bool> discard() async {
     if (dirty &&
         !await confirm(
@@ -216,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!await discard()) return;
     setState(() {
       editing = expense;
+      draftCategoryId = expense.categoryId;
       name.text = expense.particulars;
       amount.text = moneyInput(expense.amountPaise);
     });
@@ -591,7 +604,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                    compactIcon(Icons.category_outlined, 'Set category (optional)', busy ? null : () => chooseCategory(editing!.id), color: Colors.teal),
                     compactIcon(
                       Icons.delete_outline,
                       'Delete expense',
@@ -657,6 +669,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                   ],
+                ),
+              ),
+            if (active != null || editing != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: DropdownButton<int>(
+                    isDense: true,
+                    value: categoryNames.containsKey(draftCategoryId)
+                        ? draftCategoryId!
+                        : 0,
+                    items: [
+                      const DropdownMenuItem(
+                        value: 0,
+                        child: Text('Category (optional)'),
+                      ),
+                      for (final category in categoryNames.entries)
+                        DropdownMenuItem(
+                          value: category.key,
+                          child: Text(category.value),
+                        ),
+                    ],
+                    onChanged: busy
+                        ? null
+                        : (value) => setState(
+                            () => draftCategoryId = value == 0 ? null : value,
+                          ),
+                  ),
                 ),
               ),
             Padding(
