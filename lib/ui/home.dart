@@ -678,6 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: DropdownButton<int>(
                     isDense: true,
+                    isExpanded: true,
                     value: categoryNames.containsKey(draftCategoryId)
                         ? draftCategoryId!
                         : 0,
@@ -689,7 +690,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       for (final category in categoryNames.entries)
                         DropdownMenuItem(
                           value: category.key,
-                          child: Text(category.value),
+                          child: Text(category.value, overflow: TextOverflow.ellipsis),
                         ),
                     ],
                     onChanged: busy
